@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Butterfly Ginger Lilies for You</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at center, #0f1f1a 0%, #060b0a 100%);
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Georgia', serif;
+      color: #fff;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .message-container {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      opacity: 0;
+      animation: fadeIn 3s ease 4s forwards;
+      pointer-events: none;
+      text-shadow: 0 4px 25px rgba(0, 0, 0, 0.9);
+      padding: 20px;
+    }
+
+    .subtitle-top {
+      font-size: 11px;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: rgba(220, 240, 230, 0.65);
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 40px;
+      font-weight: 400;
+      margin-bottom: 12px;
+      letter-spacing: 2px;
+      color: #f7faf8;
+    }
+
+    p {
+      font-size: 15px;
+      font-style: italic;
+      color: rgba(230, 245, 238, 0.85);
+      max-width: 440px;
+      line-height: 1.6;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="message-container">
+    <div class="subtitle-top">Forever & Always</div>
+    <h1>My Love</h1>
+    <p>White butterfly ginger lilies bloom with grace and sweet fragrance, just like every moment with you.</p>
+  </div>
+
+  <canvas id="garden"></canvas>
+
+  <script>
+    const canvas = document.getElementById('garden');
+    const ctx = canvas.getContext('2d');
+
+    let width, height;
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class GingerLily {
+      constructor(x, targetHeight, delay) {
+        this.x = x;
+        this.baseY = height;
+        this.targetHeight = targetHeight;
+        this.currentHeight = 0;
+        this.stemGrowthSpeed = Math.random() * 1.8 + 2.2;
+        this.delay = delay;
+        this.age = 0;
+        this.curve = (Math.random() - 0.5) * 35;
+
+        this.bloomScale = 0;
+        this.bloomSpeed = 0.025 + Math.random() * 0.015;
+        this.stemColor = `hsl(${135 + Math.random() * 15}, 35%, ${22 + Math.random() * 10}%)`;
+        this.size = Math.random() * 8 + 22;
+        this.tilt = (Math.random() - 0.5) * 0.3;
+      }
+
+      update() {
+        if (this.age < this.delay) {
+          this.age++;
+          return;
+        }
+
+        if (this.currentHeight < this.targetHeight) {
+          this.currentHeight += this.stemGrowthSpeed;
+          if (this.currentHeight > this.targetHeight) {
+            this.currentHeight = this.targetHeight;
+          }
+        } else if (this.bloomScale < 1) {
+          this.bloomScale += this.bloomSpeed;
+          if (this.bloomScale > 1) this.bloomScale = 1;
+        }
+      }
+
+      draw() {
+        if (this.age < this.delay) return;
+
+        const currentY = this.baseY - this.currentHeight;
+        const progress = this.currentHeight / this.targetHeight;
+        const curveX = this.x + Math.sin(progress * Math.PI) * this.curve;
+
+        // Draw Stem
+        ctx.beginPath();
+        ctx.strokeStyle = this.stemColor;
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.moveTo(this.x, this.baseY);
+        ctx.quadraticCurveTo(
+          this.x + this.curve * 0.6,
+          this.baseY - this.currentHeight / 2,
+          curveX,
+          currentY
+        );
+        ctx.stroke();
+
+        // Broad Ginger Lily Leaves
+        if (progress > 0.35) {
+          const leafY = this.baseY - this.targetHeight * 0.35;
+          const leafX = this.x + Math.sin(0.35 * Math.PI) * this.curve;
+          this.drawLeaf(leafX, leafY, -1, 38, 12);
+        }
+        if (progress > 0.65) {
+          const leafY = this.baseY - this.targetHeight * 0.65;
+          const leafX = this.x + Math.sin(0.65 * Math.PI) * this.curve;
+          this.drawLeaf(leafX, leafY, 1, 32, 10);
+        }
+
+        // Draw Butterfly Ginger Lily Bloom
+        if (this.bloomScale > 0) {
+          this.drawLilyBloom(curveX, currentY);
+        }
+      }
+
+      drawLeaf(x, y, dir, length, width) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate((dir * Math.PI) / 4.5);
+        ctx.beginPath();
+        ctx.fillStyle = this.stemColor;
+        ctx.ellipse(dir * (length * 0.5), 0, length * 0.6, width * 0.6, (dir * Math.PI) / 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      drawLilyBloom(x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(this.tilt);
+
+        const s = this.size * this.bloomScale;
+
+        // Soft back glow for contrast
+        const glow = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.6);
+        glow.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+        glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, s * 1.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 1. Back Upper Sepal / Narrow Petals
+        ctx.fillStyle = 'rgba(240, 248, 242, 0.88)';
+        ctx.beginPath();
+        ctx.ellipse(0, -s * 0.9, s * 0.2, s * 0.65, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Lateral Wing Petals (Butterfly wings shape)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        // Left wing
+        ctx.beginPath();
+        ctx.ellipse(-s * 0.65, -s * 0.2, s * 0.58, s * 0.35, -Math.PI / 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Right wing
+        ctx.beginPath();
+        ctx.ellipse(s * 0.65, -s * 0.2, s * 0.58, s * 0.35, Math.PI / 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3. Wide Two-lobed Lower Lip (Labellum)
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(-s * 0.28, s * 0.35, s * 0.45, s * 0.4, Math.PI / 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.ellipse(s * 0.28, s * 0.35, s * 0.45, s * 0.4, -Math.PI / 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. Soft Pale-Yellow Center Throat
+        const centerGrad = ctx.createRadialGradient(0, 0, 1, 0, s * 0.1, s * 0.45);
+        centerGrad.addColorStop(0, 'rgba(244, 232, 140, 0.9)');
+        centerGrad.addColorStop(0.7, 'rgba(244, 232, 140, 0.4)');
+        centerGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = centerGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, s * 0.1, s * 0.45, s * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 5. Long Arching Stamen with Pale Anther
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(225, 245, 215, 0.95)';
+        ctx.lineWidth = 1.8;
+        ctx.moveTo(0, s * 0.15);
+        ctx.quadraticCurveTo(s * 0.35, -s * 0.7, 0, -s * 1.15);
+        ctx.stroke();
+
+        // Anther tip
+        ctx.fillStyle = '#f0e68c';
+        ctx.beginPath();
+        ctx.arc(0, -s * 1.15, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    // Generate Flowers
+    const flowers = [];
+    const count = 30;
+    const spacing = width / count;
+
+    for (let i = 0; i < count; i++) {
+      const posX = i * spacing + (Math.random() - 0.5) * spacing * 0.85;
+      const targetH = Math.random() * (height * 0.42) + (height * 0.28);
+      const delay = Math.random() * 110;
+      flowers.push(new GingerLily(posX, targetH, delay));
+    }
+
+    // Sort by height for front-to-back depth
+    flowers.sort((a, b) => a.targetHeight - b.targetHeight);
+
+    // Subtle soft-glow floating particles
+    const particles = Array.from({ length: 28 }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      size: Math.random() * 2 + 1,
+      speedY: Math.random() * -0.4 - 0.15,
+      opacity: Math.random() * 0.4 + 0.15
+    }));
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+
+      particles.forEach(p => {
+        p.y += p.speedY;
+        if (p.y < 0) p.y = height;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(220, 245, 230, ${p.opacity})`;
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      flowers.forEach(flower => {
+        flower.update();
+        flower.draw();
+      });
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
