@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Butterfly Ginger Lilies</title>
+  <title>Flowers for You</title>
   <style>
     * {
       box-sizing: border-box;
@@ -18,6 +18,48 @@
       font-family: 'Georgia', serif;
       color: #fff;
       position: relative;
+      user-select: none;
+    }
+
+    /* Start / Tap-to-Play Overlay */
+    #start-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #060b0a;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      cursor: pointer;
+      transition: opacity 1.2s ease, visibility 1.2s;
+    }
+
+    #start-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .start-icon {
+      font-size: 38px;
+      margin-bottom: 16px;
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    .start-text {
+      font-size: 14px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: rgba(220, 245, 230, 0.8);
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
     }
 
     canvas {
@@ -29,44 +71,47 @@
       z-index: 1;
     }
 
-    /* Positioned at the top above the flower garden */
+    /* Compact Top Header */
     .message-container {
       position: absolute;
-      top: 8%;
+      top: 3%;
       left: 50%;
       transform: translateX(-50%);
       width: 90%;
-      max-width: 450px;
+      max-width: 420px;
       z-index: 10;
       text-align: center;
       opacity: 0;
-      animation: fadeIn 2.5s ease 3s forwards;
       pointer-events: none;
-      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.9);
-      padding: 10px;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.95);
+      padding: 6px 12px;
+    }
+
+    .message-container.show {
+      animation: fadeIn 2.5s ease 1s forwards;
     }
 
     .subtitle-top {
-      font-size: 18px;
+      font-size: 11px;
       letter-spacing: 4px;
       text-transform: uppercase;
       color: rgba(220, 240, 230, 0.7);
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
 
     h1 {
-      font-size: 34px;
+      font-size: clamp(28px, 6.5vw, 36px);
       font-weight: 400;
-      margin-bottom: 10px;
-      letter-spacing: 2px;
+      margin-bottom: 8px;
+      letter-spacing: 1.5px;
       color: #f7faf8;
     }
 
     p {
-      font-size: 20px;
+      font-size: clamp(12px, 3.4vw, 14.5px);
       font-style: italic;
-      color: rgba(230, 245, 238, 0.85);
-      line-height: 1.5;
+      color: rgba(230, 245, 238, 0.9);
+      line-height: 1.45;
     }
 
     @keyframes fadeIn {
@@ -78,11 +123,19 @@
 </head>
 <body>
 
-  <div class="message-container">
+  <div id="start-screen">
+    <div class="start-icon">💌</div>
+    <div class="start-text">Tap to open</div>
+  </div>
+
+  <audio id="bg-music" loop preload="auto">
+    <source src="music.mp3" type="audio/mp3">
+  </audio>
+
+  <div class="message-container" id="message-box">
     <div class="subtitle-top">Hey</div>
     <h1>Caccapino</h1>
-    <p>No matter where life takes you, remember to be yourself. You truly have the prettiest smile, so never let anything take it away. Wishing you peace, happiness, and all the good things in life. God bless you dear.</p>
-     <p>These flowers are for you 🌸</p>
+    <p>No matter where life takes you, remember to be yourself. You truly have the prettiest smile, so never let anything take it away. Wishing you peace, happiness, and all the good things in life. God bless you dear. These flowers are for you 🌸</p>
   </div>
 
   <canvas id="garden"></canvas>
@@ -90,6 +143,9 @@
   <script>
     const canvas = document.getElementById('garden');
     const ctx = canvas.getContext('2d');
+    const startScreen = document.getElementById('start-screen');
+    const messageBox = document.getElementById('message-box');
+    const music = document.getElementById('bg-music');
 
     let width, height;
     function resize() {
@@ -99,25 +155,28 @@
     window.addEventListener('resize', resize);
     resize();
 
+    let started = false;
+
     class GingerLily {
       constructor(x, targetHeight, delay) {
         this.x = x;
         this.baseY = height;
         this.targetHeight = targetHeight;
         this.currentHeight = 0;
-        this.stemGrowthSpeed = Math.random() * 1.8 + 2.2;
+        this.stemGrowthSpeed = Math.random() * 1.5 + 1.8;
         this.delay = delay;
         this.age = 0;
-        this.curve = (Math.random() - 0.5) * 35;
+        this.curve = (Math.random() - 0.5) * 28;
 
         this.bloomScale = 0;
-        this.bloomSpeed = 0.025 + Math.random() * 0.015;
+        this.bloomSpeed = 0.02 + Math.random() * 0.015;
         this.stemColor = `hsl(${135 + Math.random() * 15}, 35%, ${22 + Math.random() * 10}%)`;
-        this.size = Math.random() * 6 + 18;
-        this.tilt = (Math.random() - 0.5) * 0.3;
+        this.size = Math.random() * 5 + 16;
+        this.tilt = (Math.random() - 0.5) * 0.28;
       }
 
       update() {
+        if (!started) return;
         if (this.age < this.delay) {
           this.age++;
           return;
@@ -135,7 +194,7 @@
       }
 
       draw() {
-        if (this.age < this.delay) return;
+        if (this.age < this.delay || !started) return;
 
         const currentY = this.baseY - this.currentHeight;
         const progress = this.currentHeight / this.targetHeight;
@@ -144,7 +203,7 @@
         // Stem
         ctx.beginPath();
         ctx.strokeStyle = this.stemColor;
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.moveTo(this.x, this.baseY);
         ctx.quadraticCurveTo(
@@ -159,15 +218,15 @@
         if (progress > 0.35) {
           const leafY = this.baseY - this.targetHeight * 0.35;
           const leafX = this.x + Math.sin(0.35 * Math.PI) * this.curve;
-          this.drawLeaf(leafX, leafY, -1, 34, 11);
+          this.drawLeaf(leafX, leafY, -1, 30, 10);
         }
         if (progress > 0.65) {
           const leafY = this.baseY - this.targetHeight * 0.65;
           const leafX = this.x + Math.sin(0.65 * Math.PI) * this.curve;
-          this.drawLeaf(leafX, leafY, 1, 28, 9);
+          this.drawLeaf(leafX, leafY, 1, 24, 8);
         }
 
-        // Flower Bloom
+        // Bloom
         if (this.bloomScale > 0) {
           this.drawLilyBloom(curveX, currentY);
         }
@@ -192,15 +251,15 @@
         const s = this.size * this.bloomScale;
 
         // Glow
-        const glow = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.5);
+        const glow = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.4);
         glow.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
         glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(0, 0, s * 1.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, s * 1.4, 0, Math.PI * 2);
         ctx.fill();
 
-        // 1. Back Narrow Petals
+        // 1. Back Upper Sepal
         ctx.fillStyle = 'rgba(240, 248, 242, 0.88)';
         ctx.beginPath();
         ctx.ellipse(0, -s * 0.85, s * 0.2, s * 0.6, 0, 0, Math.PI * 2);
@@ -216,7 +275,7 @@
         ctx.ellipse(s * 0.6, -s * 0.18, s * 0.55, s * 0.32, Math.PI / 5, 0, Math.PI * 2);
         ctx.fill();
 
-        // 3. Labellum (Lower Lip)
+        // 3. Labellum
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.ellipse(-s * 0.25, s * 0.3, s * 0.42, s * 0.38, Math.PI / 8, 0, Math.PI * 2);
@@ -239,37 +298,36 @@
         // 5. Stamen & Anther
         ctx.beginPath();
         ctx.strokeStyle = 'rgba(225, 245, 215, 0.95)';
-        ctx.lineWidth = 1.6;
+        ctx.lineWidth = 1.5;
         ctx.moveTo(0, s * 0.15);
         ctx.quadraticCurveTo(s * 0.3, -s * 0.6, 0, -s * 1.05);
         ctx.stroke();
 
         ctx.fillStyle = '#f0e68c';
         ctx.beginPath();
-        ctx.arc(0, -s * 1.05, 2, 0, Math.PI * 2);
+        ctx.arc(0, -s * 1.05, 1.8, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
       }
     }
 
-    // Generate Flowers (Capped to stay below the text)
+    // Generate Flowers (Capped between 18% and 36% of screen height)
     const flowers = [];
     const count = 26;
     const spacing = width / count;
 
     for (let i = 0; i < count; i++) {
       const posX = i * spacing + (Math.random() - 0.5) * spacing * 0.85;
-      // Stems reach between 30% and 52% height from bottom, leaving top clear
-      const targetH = Math.random() * (height * 0.22) + (height * 0.30);
-      const delay = Math.random() * 100;
+      const targetH = Math.random() * (height * 0.18) + (height * 0.18);
+      const delay = Math.random() * 80;
       flowers.push(new GingerLily(posX, targetH, delay));
     }
 
     flowers.sort((a, b) => a.targetHeight - b.targetHeight);
 
-    // Floating light particles
-    const particles = Array.from({ length: 24 }, () => ({
+    // Light particles
+    const particles = Array.from({ length: 22 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
       size: Math.random() * 1.8 + 1,
@@ -298,6 +356,16 @@
     }
 
     animate();
+
+    startScreen.addEventListener('click', () => {
+      started = true;
+      startScreen.classList.add('hidden');
+      messageBox.classList.add('show');
+      
+      music.play().catch(e => {
+        console.log("Audio play error:", e);
+      });
+    });
   </script>
 </body>
 </html>
