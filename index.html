@@ -21,7 +21,7 @@
       user-select: none;
     }
 
-    /* Start / Tap-to-Play Overlay */
+    /* Tap-to-Play Overlay */
     #start-screen {
       position: fixed;
       top: 0;
@@ -44,22 +44,17 @@
       pointer-events: none;
     }
 
-    .start-icon {
-      font-size: 38px;
-      margin-bottom: 16px;
-      animation: pulse 2s infinite ease-in-out;
-    }
-
     .start-text {
-      font-size: 24px;
+      font-size: 14px;
       letter-spacing: 4px;
       text-transform: uppercase;
       color: rgba(220, 245, 230, 0.8);
+      animation: pulse 2s infinite ease-in-out;
     }
 
     @keyframes pulse {
       0%, 100% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.15); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 1; }
     }
 
     canvas {
@@ -71,14 +66,14 @@
       z-index: 1;
     }
 
-    /* Compact Top Header */
+    /* Message Header */
     .message-container {
       position: absolute;
       top: 3%;
       left: 50%;
       transform: translateX(-50%);
-      width: 90%;
-      max-width: 420px;
+      width: 92%;
+      max-width: 480px;
       z-index: 10;
       text-align: center;
       opacity: 0;
@@ -93,25 +88,25 @@
 
     .subtitle-top {
       font-size: 14px;
-      letter-spacing: 4px;
+      letter-spacing: 5px;
       text-transform: uppercase;
-      color: rgba(220, 240, 230, 0.7);
-      margin-bottom: 4px;
+      color: rgba(220, 240, 230, 0.75);
+      margin-bottom: 6px;
     }
 
     h1 {
-      font-size: clamp(28px, 6.5vw, 36px);
+      font-size: clamp(34px, 8vw, 44px);
       font-weight: 400;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       letter-spacing: 1.5px;
       color: #f7faf8;
     }
 
     p {
-      font-size: clamp(20px, 3.4vw, 14.5px);
+      font-size: clamp(15px, 4vw, 18px);
       font-style: italic;
-      color: rgba(230, 245, 238, 0.9);
-      line-height: 1.45;
+      color: rgba(230, 245, 238, 0.95);
+      line-height: 1.6;
     }
 
     @keyframes fadeIn {
@@ -174,6 +169,13 @@
         this.tilt = (Math.random() - 0.5) * 0.28;
       }
 
+      getHeadPos() {
+        const currentY = this.baseY - this.currentHeight;
+        const progress = this.targetHeight > 0 ? (this.currentHeight / this.targetHeight) : 0;
+        const curveX = this.x + Math.sin(progress * Math.PI) * this.curve;
+        return { x: curveX, y: currentY };
+      }
+
       update() {
         if (!started) return;
         if (this.age < this.delay) {
@@ -195,9 +197,10 @@
       draw() {
         if (this.age < this.delay || !started) return;
 
-        const currentY = this.baseY - this.currentHeight;
+        const pos = this.getHeadPos();
+        const currentY = pos.y;
+        const curveX = pos.x;
         const progress = this.currentHeight / this.targetHeight;
-        const curveX = this.x + Math.sin(progress * Math.PI) * this.curve;
 
         // Stem
         ctx.beginPath();
@@ -249,7 +252,7 @@
 
         const s = this.size * this.bloomScale;
 
-        // Glow
+        // Soft glow
         const glow = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.4);
         glow.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
         glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
@@ -311,6 +314,119 @@
       }
     }
 
+    // Little Butterfly Class
+    class Butterfly {
+      constructor(targetFlower, delay, color) {
+        this.targetFlower = targetFlower;
+        this.delay = delay;
+        this.age = 0;
+        this.color = color;
+        
+        // Spawn from upper sides
+        this.x = Math.random() < 0.5 ? -30 : width + 30;
+        this.y = Math.random() * (height * 0.45);
+        
+        this.wingAngle = 0;
+        this.wingSpeed = 0.25;
+        this.size = 5.5 + Math.random() * 2.5;
+        this.isLanded = false;
+        this.wobblePhase = Math.random() * Math.PI * 2;
+      }
+
+      update() {
+        if (!started) return;
+        if (this.age < this.delay) {
+          this.age++;
+          return;
+        }
+
+        // Wait until target flower has finished blooming
+        if (this.targetFlower.bloomScale < 0.95) return;
+
+        const target = this.targetFlower.getHeadPos();
+        // Land slightly to the side/top of the flower head
+        const destX = target.x + (Math.sin(this.wobblePhase) * 3);
+        const destY = target.y - this.targetFlower.size * 0.5;
+
+        const dx = destX - this.x;
+        const dy = destY - this.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist > 2 && !this.isLanded) {
+          // Flight path with flutter wave
+          this.wobblePhase += 0.08;
+          const speed = Math.min(2.0, Math.max(0.7, dist * 0.015));
+          const angle = Math.atan2(dy, dx);
+
+          this.x += Math.cos(angle) * speed + Math.sin(this.wobblePhase) * 0.8;
+          this.y += Math.sin(angle) * speed + Math.cos(this.wobblePhase * 1.2) * 0.6;
+          this.wingSpeed = 0.28;
+        } else {
+          // Landed on flower
+          this.isLanded = true;
+          this.x = destX;
+          this.y = destY;
+          // Gentle resting flutter
+          this.wingSpeed = 0.04;
+        }
+
+        this.wingAngle += this.wingSpeed;
+      }
+
+      draw() {
+        if (this.age < this.delay || !started) return;
+        if (this.targetFlower.bloomScale < 0.95 && !this.isLanded) return;
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        const wingFlap = Math.abs(Math.sin(this.wingAngle)); // 0 to 1
+        const s = this.size;
+
+        // Subtle warm glow around butterfly
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255, 255, 255, 0.25)`;
+        ctx.arc(0, 0, s * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Left wing
+        ctx.save();
+        ctx.scale(wingFlap, 1);
+        ctx.fillStyle = this.color.wing;
+        ctx.beginPath();
+        ctx.ellipse(-s * 0.6, -s * 0.3, s * 0.8, s * 0.45, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+        // Wing interior tint
+        ctx.fillStyle = this.color.tint;
+        ctx.beginPath();
+        ctx.ellipse(-s * 0.55, -s * 0.25, s * 0.45, s * 0.25, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Right wing
+        ctx.save();
+        ctx.scale(wingFlap, 1);
+        ctx.fillStyle = this.color.wing;
+        ctx.beginPath();
+        ctx.ellipse(s * 0.6, -s * 0.3, s * 0.8, s * 0.45, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+        // Wing interior tint
+        ctx.fillStyle = this.color.tint;
+        ctx.beginPath();
+        ctx.ellipse(s * 0.55, -s * 0.25, s * 0.45, s * 0.25, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Butterfly Body
+        ctx.fillStyle = '#2b261d';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 1.2, s * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
     // Generate Flowers (Capped between 18% and 36% of screen height)
     const flowers = [];
     const count = 26;
@@ -325,7 +441,29 @@
 
     flowers.sort((a, b) => a.targetHeight - b.targetHeight);
 
-    // Light particles
+    // Generate Little Butterflies that seek distinct flowers
+    const butterflyColors = [
+      { wing: '#ffcad4', tint: '#ffffff' }, // soft blush pink
+      { wing: '#ffe599', tint: '#fff8db' }, // pale golden yellow
+      { wing: '#c5e3f6', tint: '#ffffff' }, // powder soft blue
+      { wing: '#e2cfea', tint: '#ffffff' }  // soft lavender
+    ];
+
+    const butterflies = [];
+    // Choose 5 random distinct flowers for butterflies to sit on
+    const chosenIndices = [];
+    while (chosenIndices.length < 5) {
+      const r = Math.floor(Math.random() * flowers.length);
+      if (!chosenIndices.includes(r)) chosenIndices.push(r);
+    }
+
+    chosenIndices.forEach((flowerIdx, i) => {
+      const color = butterflyColors[i % butterflyColors.length];
+      const flyDelay = 140 + i * 45; // Arrive after flowers start blooming
+      butterflies.push(new Butterfly(flowers[flowerIdx], flyDelay, color));
+    });
+
+    // Ambient floating particles
     const particles = Array.from({ length: 22 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
@@ -349,6 +487,11 @@
       flowers.forEach(flower => {
         flower.update();
         flower.draw();
+      });
+
+      butterflies.forEach(b => {
+        b.update();
+        b.draw();
       });
 
       requestAnimationFrame(animate);
