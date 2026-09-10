@@ -441,25 +441,30 @@
 
     flowers.sort((a, b) => a.targetHeight - b.targetHeight);
 
-    // Generate Little Butterflies that seek distinct flowers
+// Enhanced Pastel Color Palette for Butterflies
     const butterflyColors = [
-      { wing: '#ffcad4', tint: '#ffffff' }, // soft blush pink
+      { wing: '#ffcad4', tint: '#ffffff' }, // blush pink
       { wing: '#ffe599', tint: '#fff8db' }, // pale golden yellow
-      { wing: '#c5e3f6', tint: '#ffffff' }, // powder soft blue
-      { wing: '#e2cfea', tint: '#ffffff' }  // soft lavender
+      { wing: '#c5e3f6', tint: '#ffffff' }, // soft sky blue
+      { wing: '#e2cfea', tint: '#ffffff' }, // lavender
+      { wing: '#ffd6a5', tint: '#fff0e1' }, // peach
+      { wing: '#caffbf', tint: '#f2ffed' }, // soft mint green
+      { wing: '#ffb4d6', tint: '#ffeaf4' }  // rose pink
     ];
 
     const butterflies = [];
-    // Choose 5 random distinct flowers for butterflies to sit on
+    const totalButterflies = 12; // Increased count
     const chosenIndices = [];
-    while (chosenIndices.length < 5) {
+
+    // Select random flowers for butterflies to land on
+    while (chosenIndices.length < totalButterflies) {
       const r = Math.floor(Math.random() * flowers.length);
-      if (!chosenIndices.includes(r)) chosenIndices.push(r);
+      chosenIndices.push(r); // Allows flowers to occasionally share butterflies naturally
     }
 
     chosenIndices.forEach((flowerIdx, i) => {
       const color = butterflyColors[i % butterflyColors.length];
-      const flyDelay = 140 + i * 45; // Arrive after flowers start blooming
+      const flyDelay = 110 + i * 22; // Staggered arrival timings
       butterflies.push(new Butterfly(flowers[flowerIdx], flyDelay, color));
     });
 
