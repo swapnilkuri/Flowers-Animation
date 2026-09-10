@@ -314,23 +314,37 @@
       }
     }
 
-    // Little Butterfly Class
+    // Butterfly Class (Supports both landing and free-flying roamers)
     class Butterfly {
-      constructor(targetFlower, delay, color) {
+      constructor(targetFlower, delay, color, behavesAsFlyer = false) {
         this.targetFlower = targetFlower;
         this.delay = delay;
         this.age = 0;
         this.color = color;
-        
-        // Spawn from upper sides
-        this.x = Math.random() < 0.5 ? -30 : width + 30;
-        this.y = Math.random() * (height * 0.45);
-        
-        this.wingAngle = 0;
-        this.wingSpeed = 0.25;
-        this.size = 5.5 + Math.random() * 2.5;
+        this.behavesAsFlyer = behavesAsFlyer;
+
+        // Spawn randomly outside edges
+        const side = Math.random();
+        if (side < 0.4) {
+          this.x = -25;
+          this.y = Math.random() * (height * 0.7);
+        } else if (side < 0.8) {
+          this.x = width + 25;
+          this.y = Math.random() * (height * 0.7);
+        } else {
+          this.x = Math.random() * width;
+          this.y = -25;
+        }
+
+        this.wingAngle = Math.random() * Math.PI;
+        this.wingSpeed = 0.28;
+        this.size = 4.5 + Math.random() * 2.8;
         this.isLanded = false;
         this.wobblePhase = Math.random() * Math.PI * 2;
+
+        // Roaming flight targets for flyers
+        this.waypointX = Math.random() * width;
+        this.waypointY = Math.random() * (height * 0.6) + (height * 0.2);
       }
 
       update() {
@@ -340,34 +354,49 @@
           return;
         }
 
-        // Wait until target flower has finished blooming
-        if (this.targetFlower.bloomScale < 0.95) return;
+        this.wobblePhase += 0.08;
 
-        const target = this.targetFlower.getHeadPos();
-        // Land slightly to the side/top of the flower head
-        const destX = target.x + (Math.sin(this.wobblePhase) * 3);
-        const destY = target.y - this.targetFlower.size * 0.5;
+        if (this.behavesAsFlyer) {
+          // Free-flying butterfly wandering gracefully
+          const dx = this.waypointX - this.x;
+          const dy = this.waypointY - this.y;
+          const dist = Math.hypot(dx, dy);
 
-        const dx = destX - this.x;
-        const dy = destY - this.y;
-        const dist = Math.hypot(dx, dy);
+          if (dist < 40) {
+            this.waypointX = Math.random() * width;
+            this.waypointY = Math.random() * (height * 0.55) + (height * 0.25);
+          }
 
-        if (dist > 2 && !this.isLanded) {
-          // Flight path with flutter wave
-          this.wobblePhase += 0.08;
-          const speed = Math.min(2.0, Math.max(0.7, dist * 0.015));
           const angle = Math.atan2(dy, dx);
-
-          this.x += Math.cos(angle) * speed + Math.sin(this.wobblePhase) * 0.8;
-          this.y += Math.sin(angle) * speed + Math.cos(this.wobblePhase * 1.2) * 0.6;
-          this.wingSpeed = 0.28;
+          const speed = 1.3;
+          this.x += Math.cos(angle) * speed + Math.sin(this.wobblePhase) * 1.1;
+          this.y += Math.sin(angle) * speed + Math.cos(this.wobblePhase * 1.2) * 0.7;
+          this.wingSpeed = 0.32;
         } else {
-          // Landed on flower
-          this.isLanded = true;
-          this.x = destX;
-          this.y = destY;
-          // Gentle resting flutter
-          this.wingSpeed = 0.04;
+          // Sitter butterfly seeking a specific flower
+          if (this.targetFlower.bloomScale < 0.9) return;
+
+          const target = this.targetFlower.getHeadPos();
+          const destX = target.x + (Math.sin(this.wobblePhase) * 3);
+          const destY = target.y - this.targetFlower.size * 0.45;
+
+          const dx = destX - this.x;
+          const dy = destY - this.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist > 2.5 && !this.isLanded) {
+            const speed = Math.min(2.2, Math.max(0.7, dist * 0.02));
+            const angle = Math.atan2(dy, dx);
+
+            this.x += Math.cos(angle) * speed + Math.sin(this.wobblePhase) * 0.8;
+            this.y += Math.sin(angle) * speed + Math.cos(this.wobblePhase * 1.2) * 0.6;
+            this.wingSpeed = 0.28;
+          } else {
+            this.isLanded = true;
+            this.x = destX;
+            this.y = destY;
+            this.wingSpeed = 0.035; // gentle rest flap
+          }
         }
 
         this.wingAngle += this.wingSpeed;
@@ -375,18 +404,18 @@
 
       draw() {
         if (this.age < this.delay || !started) return;
-        if (this.targetFlower.bloomScale < 0.95 && !this.isLanded) return;
+        if (!this.behavesAsFlyer && this.targetFlower.bloomScale < 0.9 && !this.isLanded) return;
 
         ctx.save();
         ctx.translate(this.x, this.y);
 
-        const wingFlap = Math.abs(Math.sin(this.wingAngle)); // 0 to 1
+        const wingFlap = Math.abs(Math.sin(this.wingAngle));
         const s = this.size;
 
-        // Subtle warm glow around butterfly
+        // Glow aura
         ctx.beginPath();
-        ctx.fillStyle = `rgba(255, 255, 255, 0.25)`;
-        ctx.arc(0, 0, s * 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.arc(0, 0, s * 1.3, 0, Math.PI * 2);
         ctx.fill();
 
         // Left wing
@@ -396,7 +425,7 @@
         ctx.beginPath();
         ctx.ellipse(-s * 0.6, -s * 0.3, s * 0.8, s * 0.45, -Math.PI / 4, 0, Math.PI * 2);
         ctx.fill();
-        // Wing interior tint
+
         ctx.fillStyle = this.color.tint;
         ctx.beginPath();
         ctx.ellipse(-s * 0.55, -s * 0.25, s * 0.45, s * 0.25, -Math.PI / 4, 0, Math.PI * 2);
@@ -410,15 +439,15 @@
         ctx.beginPath();
         ctx.ellipse(s * 0.6, -s * 0.3, s * 0.8, s * 0.45, Math.PI / 4, 0, Math.PI * 2);
         ctx.fill();
-        // Wing interior tint
+
         ctx.fillStyle = this.color.tint;
         ctx.beginPath();
         ctx.ellipse(s * 0.55, -s * 0.25, s * 0.45, s * 0.25, Math.PI / 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        // Butterfly Body
-        ctx.fillStyle = '#2b261d';
+        // Body
+        ctx.fillStyle = '#1f1a14';
         ctx.beginPath();
         ctx.ellipse(0, 0, 1.2, s * 0.6, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -427,7 +456,7 @@
       }
     }
 
-    // Generate Flowers (Capped between 18% and 36% of screen height)
+    // Generate Flowers
     const flowers = [];
     const count = 26;
     const spacing = width / count;
@@ -441,39 +470,35 @@
 
     flowers.sort((a, b) => a.targetHeight - b.targetHeight);
 
-// Enhanced Pastel Color Palette for Butterflies
+    // Varied Colors (Red, Blue, White, Golden, Purple, Emerald)
     const butterflyColors = [
-      { wing: '#ffcad4', tint: '#ffffff' }, // blush pink
-      { wing: '#ffe599', tint: '#fff8db' }, // pale golden yellow
-      { wing: '#c5e3f6', tint: '#ffffff' }, // soft sky blue
-      { wing: '#e2cfea', tint: '#ffffff' }, // lavender
-      { wing: '#ffd6a5', tint: '#fff0e1' }, // peach
-      { wing: '#caffbf', tint: '#f2ffed' }, // soft mint green
-      { wing: '#ffb4d6', tint: '#FF2E00' }, 
-      { wing: '#ffb4d6', tint: '#FF2E00' },
-      { wing: '#ffb4d6', tint: '#FF2E00' },
-      { wing: '#ffb4d6', tint: '#00F0E6' }, 
-      { wing: '#ffb4d6', tint: '#00F0E6' },
-      { wing: '#ffb4d6', tint: '#00F0E6' }// rose pink
+      { wing: '#ff334b', tint: '#ffa3ad' }, // Vibrant Crimson Red
+      { wing: '#e62244', tint: '#ffffff' }, // Ruby Red
+      { wing: '#2e90fa', tint: '#b2ddff' }, // Electric Sky Blue
+      { wing: '#1570ef', tint: '#d1e9ff' }, // Royal Blue
+      { wing: '#ffffff', tint: '#e8f5e9' }, // Pearl / Pure White
+      { wing: '#f4fbf7', tint: '#c8e6c9' }, // Soft Frost White
+      { wing: '#ffc107', tint: '#fff3b0' }, // Golden Yellow
+      { wing: '#b692f6', tint: '#ebdfff' }, // Lavender Violet
+      { wing: '#12b76a', tint: '#a6f4c5' }  // Emerald Spring Green
     ];
 
+    // Generate ~30 Butterflies (16 Sitters, 14 Free-flying roamers)
     const butterflies = [];
-    const totalButterflies = 12; // Increased count
-    const chosenIndices = [];
+    const totalButterflies = 30;
 
-    // Select random flowers for butterflies to land on
-    while (chosenIndices.length < totalButterflies) {
-      const r = Math.floor(Math.random() * flowers.length);
-      chosenIndices.push(r); // Allows flowers to occasionally share butterflies naturally
+    for (let i = 0; i < totalButterflies; i++) {
+      const color = butterflyColors[i % butterflyColors.length];
+      const flyDelay = 70 + i * 14; // Staggered entry
+
+      // About half sit on flowers, the other half keep flying around
+      const isFlyer = i >= 16; 
+      const targetFlower = flowers[Math.floor(Math.random() * flowers.length)];
+
+      butterflies.push(new Butterfly(targetFlower, flyDelay, color, isFlyer));
     }
 
-    chosenIndices.forEach((flowerIdx, i) => {
-      const color = butterflyColors[i % butterflyColors.length];
-      const flyDelay = 110 + i * 22; // Staggered arrival timings
-      butterflies.push(new Butterfly(flowers[flowerIdx], flyDelay, color));
-    });
-
-    // Ambient floating particles
+    // Ambient floating light dust
     const particles = Array.from({ length: 22 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
